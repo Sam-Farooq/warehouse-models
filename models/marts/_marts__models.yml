@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: fct_transactions
+    description: >
+      The base fact. One row per transaction, enriched with account, currency
+      and merchant category attributes. Partitioned by event_date, clustered
+      on account_id and currency_code, and loaded with a static
+      insert_overwrite over a 3 day window. Everything else in marts/ reads
+      this.
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+      - name: amount
+        description: NUMERIC, in currency_code. Never converted.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+      - name: currency_code
+        tests:
+          - not_null
+      - name: event_date
+        tests:
+          - not_null
+          - not_in_future:
+              arguments:
+                grace_days: 1
+      - name: mcc_category_group
+        description: >
+          Coarse merchant category, or 'unmapped'. Live data carries
+          'unmapped': the upstream producer emits a null mcc on some
+          transactions, and labelling that is the point of the coalesce.
+        tests:
+          - not_null
+      - name: channel
+        description: >
+          Lowercased upstream, where a null becomes 'unknown'. Warn and not
+          error, because a new payment channel is a thing to go and read
+          about rather than a reason to stop the load.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['card', 'sepa', 'swift', 'wallet', 'unknown']
+              config:
+                severity: warn
+      - name: sample_bucket
+        description: >
+          Deterministic 0 to 99 bucket from farm_fingerprint(transaction_id).
+          `where sample_bucket = 0` is a stable one percent across queries and
+          across rebuilds.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 99
+                inclusive: true
+      - name: is_orphan_account
+        description: >
+          True when CRM has no account for this transaction. Expected to be
+          false and tested at warn severity, because the normal cause is CRM
+          running a few minutes behind and the pipeline must not stop for it.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [false]
+                quote: false
+              config:
+                severity: warn
+      - name: is_unknown_currency
+        description: >
+          True when the currency is not in the seed. Warn and not error: the
+          correct response is to add the currency to seeds/currencies.csv,
+          not to fail the load and lose the day.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [false]
+                quote: false
+              config:
+                severity: warn
