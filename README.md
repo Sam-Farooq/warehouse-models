@@ -39,6 +39,13 @@ Staging reads **silver** rather than gold. The gold layer upstream has
 already fixed its grain at account and day, and four of these five marts need
 the transaction itself.
 
+`lakehouse-pipeline` publishes only gold to BigQuery; its silver layer is a
+Delta table partitioned by `event_date` in object storage. So this project
+reads silver through a BigLake external table over those partition files. That
+table is a prerequisite rather than something this repo creates, and it is the
+answer to the obvious question about a dbt source pointing at a lakehouse
+layer that was never loaded into the warehouse.
+
 ## Currency is part of the key, not an attribute
 
 There is no FX rate table anywhere in the medallion output, so this warehouse
