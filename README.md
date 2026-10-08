@@ -254,6 +254,7 @@ dbt deps
 dbt parse --target ci --profiles-dir .   # no credentials needed
 pytest -q
 ruff check macro_tests
+ruff format --check macro_tests
 ```
 
 Against a real warehouse, which needs a BigQuery project and a service

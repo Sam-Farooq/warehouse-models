@@ -127,9 +127,8 @@ def test_incremental_window_defaults_to_the_project_variable() -> None:
 
 def test_incremental_window_counts_today_as_one_of_the_days() -> None:
     # days=1 must mean today only, so the subtraction is zero and not one.
-    assert interval_days(
-        str(call("incremental_window.sql", "incremental_window", "event_date", 1))
-    ) == 0
+    rendered = str(call("incremental_window.sql", "incremental_window", "event_date", 1))
+    assert interval_days(rendered) == 0
 
 
 def test_incremental_window_widens_for_the_models_that_read_more_than_they_write() -> None:
@@ -214,9 +213,7 @@ def test_money_scale_is_configurable() -> None:
 
 
 def test_money_wraps_an_aggregate_rather_than_a_column_name() -> None:
-    assert call("money.sql", "money", "sum(amount)") == (
-        "cast(round(sum(amount), 2) as numeric)"
-    )
+    assert call("money.sql", "money", "sum(amount)") == "cast(round(sum(amount), 2) as numeric)"
 
 
 # --------------------------------------------------------------------------
@@ -252,9 +249,7 @@ def test_not_in_future_compares_dates_not_timestamps() -> None:
 
 
 def test_not_in_future_grace_period_moves_the_boundary() -> None:
-    rendered = str(
-        call("not_in_future.sql", "test_not_in_future", "my_model", "event_date", 1)
-    )
+    rendered = str(call("not_in_future.sql", "test_not_in_future", "my_model", "event_date", 1))
     assert interval_days(rendered) == 1
 
 

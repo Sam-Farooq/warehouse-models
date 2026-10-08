@@ -13,6 +13,7 @@ jobs:
         with: {python-version: "3.11", cache: pip}
       - run: pip install -e ".[dev]"
       - run: ruff check macro_tests
+      - run: ruff format --check macro_tests
       - run: pytest -q
 
   dbt:
