@@ -61,3 +61,27 @@ models:
         tests:
           - not_null
           - not_in_future
+
+  - name: int_account_currency_daily
+    description: >
+      Account, currency and day totals. A view: its only consumer filters to
+      a window before reading it.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['event_date', 'account_id', 'currency_code']
+    columns:
+      - name: txn_count
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true
+      - name: total_amount
+        tests:
+          - not_null
+      - name: event_date
+        tests:
+          - not_null
+          - not_in_future

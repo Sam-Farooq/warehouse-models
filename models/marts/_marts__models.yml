@@ -88,3 +88,49 @@ models:
                 quote: false
               config:
                 severity: warn
+
+  - name: fct_account_currency_daily
+    description: >
+      Account day totals in one currency, against that account's own trailing
+      baseline. Reads 31 days and writes 3.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['event_date', 'account_id', 'currency_code']
+    columns:
+      - name: event_date
+        tests:
+          - not_null
+          - not_in_future:
+              arguments:
+                grace_days: 1
+      - name: txn_count
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true
+      - name: active_days_trailing
+        description: >
+          Days with activity inside the trailing window, which is 28 days, so
+          the value cannot exceed 28.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 28
+                inclusive: true
+      - name: category_hhi
+        description: >
+          Herfindahl index over the day's merchant category groups. 1.0 means
+          a single category. Bounded above by 1 because the shares sum to 1.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+      - name: has_usable_baseline
+        tests:
+          - not_null
