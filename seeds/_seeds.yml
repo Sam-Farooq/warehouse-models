@@ -4,10 +4,10 @@ seeds:
   - name: currencies
     description: >
       ISO 4217 code, numeric code and minor unit count. The minor unit column
-      is the one that matters: it is 0 for JPY and ISK, 2 for most of the
-      table, and 3 for BHD, JOD, KWD and TND. A pipeline that assumes 2
-      everywhere is wrong by a factor of 100 on four of these 31 rows and by
-      a factor of 1000 on another four.
+      is the one that matters: it is 0 for CLP, ISK, JPY, KRW and VND, 3 for
+      BHD, JOD, KWD and TND, and 2 for the other 22. A pipeline that assumes 2
+      everywhere is wrong by a factor of 100 on five of these 31 rows and by a
+      factor of 1000 on another four.
     config:
       column_types:
         iso_numeric: string
