@@ -134,3 +134,85 @@ models:
       - name: has_usable_baseline
         tests:
           - not_null
+
+  - name: fct_category_daily
+    description: >
+      Merchant category group by currency by day, with each group's share of
+      its own currency's day.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['event_date', 'currency_code', 'mcc_category_group']
+    columns:
+      - name: event_date
+        tests:
+          - not_null
+          - not_in_future:
+              arguments:
+                grace_days: 1
+      - name: total_amount
+        description: >
+          Reconciled against the fact table rather than only range checked. A
+          dropped join key leaves this aggregate internally consistent and
+          short, and no uniqueness or range test can see a row that is not
+          there.
+        tests:
+          - not_null
+          - reconciles_with:
+              arguments:
+                parent_relation: ref('fct_transactions')
+                parent_column: amount
+                group_by_columns: ['event_date', 'currency_code']
+      - name: share_of_currency_day_amount
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+      - name: active_accounts
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true
+
+  - name: dim_accounts
+    description: >
+      One row per account, CRM attributes plus lifetime activity. Rebuilt in
+      full on every run. No snapshot, because the source has no change
+      history to snapshot.
+    columns:
+      - name: account_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: lifetime_txn_count
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+      - name: last_txn_date
+        tests:
+          - not_in_future
+      - name: tenure_days
+        description: >
+          Days since the account was opened. Negative means CRM holds an
+          opening date in the future, which is a CRM problem and is reported
+          rather than enforced.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+              config:
+                severity: warn
+      - name: has_never_transacted
+        tests:
+          - not_null
