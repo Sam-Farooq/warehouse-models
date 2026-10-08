@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: int_transactions_enriched
+    description: >
+      Ephemeral. Transactions widened with account, currency and merchant
+      category attributes, with every dimension miss flagged instead of
+      dropped. Inlined into fct_transactions; it has no relation of its own,
+      so its columns are tested there.
