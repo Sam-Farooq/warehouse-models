@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push: {branches: [main]}
+  pull_request:
+
+jobs:
+  macros:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: ruff check macro_tests
+      - run: pytest -q
+
+  dbt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -e .
+
+      # dbt_utils has to be present before the parse: a test that calls
+      # dbt_utils.accepted_range is a macro reference, and an uninstalled
+      # package is an undefined macro rather than a missing download.
+      - run: dbt deps
+
+      # parse and not compile. It builds the manifest, resolves every ref,
+      # source, seed, macro and test, and type-checks every config block,
+      # without opening a connection. compile asks the adapter for relation
+      # metadata, so it needs real BigQuery credentials and belongs to the
+      # scheduled run rather than to a push on a public repo.
+      - run: dbt parse --target ci --profiles-dir .
+
+      # The parse above tolerates deprecated YAML. This does not, so the
+      # project keeps up with dbt rather than drifting until an upgrade
+      # breaks it all at once.
+      - name: fail on deprecated dbt syntax
+        run: |
+          dbt parse --target ci --profiles-dir . --no-partial-parse \
+            --show-all-deprecations 2>&1 | tee parse.log
+          if grep -q "Deprecated functionality" parse.log; then
+            echo "dbt reported deprecated syntax above"
+            exit 1
+          fi
