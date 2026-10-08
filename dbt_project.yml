@@ -1,0 +1,54 @@
+name: warehouse_models
+version: "0.4.0"
+config-version: 2
+profile: warehouse_models
+require-dbt-version: [">=1.12.0", "<2.0.0"]
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# Every number a model needs is here rather than inline in the SQL, because
+# three of the marts have to agree about the same window. When the reprocess
+# window and the partition replacement list disagree, the run filters one span
+# and overwrites another, and nothing errors.
+vars:
+  # Calendar days re-read and re-written on an incremental run, counting today.
+  reprocess_window_days: 3
+  # Trailing span for the baseline windows in fct_account_currency_daily.
+  trailing_window_days: 28
+  # Velocity thresholds. Conventions, not measurements: they were chosen to be
+  # round numbers an analyst can argue with, and they belong in a config file
+  # precisely so that argument does not need a pull request against SQL.
+  velocity_txn_per_hour: 6
+  country_hop_seconds: 1800
+  round_amount_floor: 5000
+
+models:
+  warehouse_models:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  warehouse_models:
+    +schema: reference
+    currencies:
+      +column_types:
+        iso_numeric: string
+        minor_units: int64
+    mcc_categories:
+      +column_types:
+        mcc: int64

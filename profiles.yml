@@ -1,0 +1,35 @@
+# Committed on purpose, and credential-free on purpose.
+#
+# `dbt parse` builds the manifest: it resolves every ref, source, macro and
+# test and type-checks every config block. It does not open a connection, so
+# the ci target below needs a project id that exists only as a string. That is
+# what makes the whole project checkable on a public runner.
+#
+# `dbt compile` is the opposite. It asks the adapter for relation metadata and
+# fails without real BigQuery credentials, so it is not in CI.
+warehouse_models:
+  target: ci
+  outputs:
+    ci:
+      type: bigquery
+      method: oauth
+      project: warehouse-models-ci
+      dataset: analytics_ci
+      location: EU
+      threads: 1
+      priority: interactive
+
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS', '/dev/null') }}"
+      project: "{{ env_var('WM_BQ_PROJECT', '') }}"
+      dataset: "{{ env_var('WM_BQ_DATASET', 'analytics') }}"
+      location: EU
+      threads: 8
+      priority: batch
+      # A guard against a mistake, not a budget. The fact table is partitioned
+      # by event_date; any query that forgets the partition filter should fail
+      # loudly here instead of succeeding slowly. 2 GB is above what the
+      # marts need per run and far below a full-history scan.
+      maximum_bytes_billed: 2000000000
