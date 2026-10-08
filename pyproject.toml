@@ -23,6 +23,9 @@ dev = [
     # here because the rendered-SQL tests import it directly. A test suite
     # that depends on somebody else's dependency breaks on their upgrade.
     "sqlglot==30.21.0",
+    # Same reason as sqlglot. test_exposures.py reads models/_exposures.yml
+    # directly, so the parser it uses is this project's choice and not dbt's.
+    "PyYAML==6.0.3",
 ]
 
 # This is a dbt project, not a Python package. The install exists so that dbt

@@ -1,0 +1,57 @@
+version: 2
+
+# Why these exist: without an exposure, `dbt build` has no idea what consumes a
+# mart, so renaming a column in fct_transactions passes every test in the
+# project and breaks whatever reads it. These three are the only consumers that
+# are real and in this repository. Nothing points at a dashboard, because there
+# is no dashboard; an exposure naming one that does not exist would be worse
+# than no exposure, since `dbt ls --select +exposure:*` would answer
+# confidently and wrongly.
+
+exposures:
+  - name: review_queue
+    label: Manual review queue
+    type: analysis
+    maturity: medium
+    description: >
+      Accounts whose velocity alerts fired yesterday, joined to their
+      attributes and their daily totals, ordered so the largest exposure is
+      read first. The one query here a person runs on a schedule, so a column
+      rename in any of its three inputs is felt immediately rather than at the
+      next audit.
+    depends_on:
+      - ref('dim_accounts')
+      - ref('fct_account_currency_daily')
+      - ref('fct_velocity_alerts')
+    owner:
+      name: Ahtisham Farooq
+      email: ahtishamm.farooq@gmail.com
+
+  - name: category_mix_shift
+    label: Category mix shift
+    type: analysis
+    maturity: low
+    description: >
+      Week over week movement in spend by merchant category. Low maturity on
+      purpose: it reads fct_category_daily only, and the category dimension is
+      the part of this warehouse most likely still to change shape.
+    depends_on:
+      - ref('fct_category_daily')
+    owner:
+      name: Ahtisham Farooq
+      email: ahtishamm.farooq@gmail.com
+
+  - name: baseline_coverage
+    label: Baseline coverage
+    type: analysis
+    maturity: medium
+    description: >
+      How much of each account's history is actually present, per currency.
+      The query to run before trusting any total, because a partition that
+      never landed looks exactly like a quiet day.
+    depends_on:
+      - ref('dim_accounts')
+      - ref('fct_account_currency_daily')
+    owner:
+      name: Ahtisham Farooq
+      email: ahtishamm.farooq@gmail.com

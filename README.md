@@ -314,8 +314,14 @@ and the query counts what is being dropped by segment and tenure.
   changed, which is worse than no history because it reads like history. If
   CRM starts emitting change events, `dim_accounts` becomes a view over a real
   snapshot.
-- **No exposures and no semantic layer.** Nothing downstream is declared, so
-  `dbt build` cannot tell you what a model change breaks.
+- **No semantic layer**, and exposures only for what is in this repository. The
+  three queries in `analyses/` are declared, so `dbt ls --select
+  fct_category_daily+ --resource-type exposure` answers what a change to that
+  mart breaks. Nothing outside the repo is declared, because nothing outside it
+  is real yet: an exposure pointing at a dashboard that does not exist would
+  make `dbt ls` answer confidently and wrongly, which is worse than silence.
+  `macro_tests/test_exposures.py` compares every exposure against the `ref()`
+  calls in its analysis, so a stale one fails rather than lying.
 - **No `dbt run` in CI.** Everything above is static validation. The models
   have never been executed against BigQuery in this repository. The SQL is
   parsed with the BigQuery dialect rather than run, by
