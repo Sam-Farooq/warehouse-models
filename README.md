@@ -53,11 +53,12 @@ test can catch, because the arithmetic is all internally consistent.
 
 The one place currency arithmetic happens is `to_minor_units()`, which scales
 an amount by its own currency's exponent for exact integer comparisons.
-`seeds/currencies.csv` carries 31 currencies, and the exponent is 0 for JPY
-and ISK, 3 for BHD, JOD, KWD and TND, and 2 for the rest. Silver admits five
-currencies today, all of them two-decimal, so the zero and three decimal rows
-in that seed are exercised by the macro's unit tests and not yet by live data.
-That is worth knowing before anyone treats the column as proven.
+`seeds/currencies.csv` carries 31 currencies: the exponent is 0 for CLP, ISK,
+JPY, KRW and VND, 3 for BHD, JOD, KWD and TND, and 2 for the other 22. Silver
+admits five currencies today, all of them two-decimal, so the zero and three
+decimal rows in that seed are exercised by the macro's unit tests and not yet
+by live data. That is worth knowing before anyone treats the column as
+proven.
 
 ## insert_overwrite, and the part of it that bites
 
