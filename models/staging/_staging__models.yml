@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: stg_silver__transactions
+    description: >
+      Transaction grain, cast and case-normalised. Row count equals the
+      source exactly: staging drops nothing.
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+      - name: amount
+        description: NUMERIC, two decimal places, in currency_code.
+        tests:
+          - not_null
+      - name: currency_code
+        description: Uppercase ISO 4217 alphabetic code.
+        tests:
+          - not_null
+      - name: event_date
+        tests:
+          - not_null
+
+  - name: stg_crm__accounts
+    description: Current state account attributes.
+    columns:
+      - name: account_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: is_closed
+        tests:
+          - not_null
+
+  - name: stg_reference__currencies
+    columns:
+      - name: currency_code
+        tests:
+          - unique
+          - not_null
+      - name: minor_units
+        tests:
+          - not_null
+
+  - name: stg_reference__mcc_categories
+    columns:
+      - name: mcc
+        tests:
+          - unique
+          - not_null
+      - name: category_group
+        tests:
+          - not_null

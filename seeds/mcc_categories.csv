@@ -1,0 +1,39 @@
+mcc,category,category_group
+4111,Commuter transport,travel
+4121,Taxis and limousines,travel
+4511,Airlines,travel
+4722,Travel agencies,travel
+4812,Telecom equipment,telecom
+4814,Telecom services,telecom
+4899,Cable and satellite,telecom
+4900,Utilities,utilities
+5411,Grocery stores,grocery
+5422,Meat provisioners,grocery
+5499,Speciality food stores,grocery
+5541,Service stations,fuel
+5542,Automated fuel dispensers,fuel
+5651,Family clothing,retail
+5691,Clothing stores,retail
+5732,Electronics stores,retail
+5812,Restaurants,dining
+5813,Drinking places,dining
+5814,Fast food,dining
+5912,Pharmacies,health
+5921,Beer wine and liquor,retail
+5942,Book stores,retail
+5999,Speciality retail,retail
+6010,Manual cash disbursement,cash
+6011,ATM cash disbursement,cash
+6012,Financial institution services,financial
+6051,Money orders and FX,financial
+7011,Hotels and lodging,travel
+7311,Advertising services,services
+7372,Data processing services,services
+7399,Business services,services
+7832,Cinemas,entertainment
+7995,Betting and gaming,gambling
+8011,Doctors and physicians,health
+8062,Hospitals,health
+8220,Colleges and universities,education
+8398,Charitable organisations,nonprofit
+8999,Professional services,services

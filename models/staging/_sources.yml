@@ -1,0 +1,65 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Transaction grain output of the medallion pipeline in
+      lakehouse-pipeline, published to BigQuery. Deduplicated on
+      transaction_id inside a watermark, validated, and conformed upstream.
+      Nothing in this project re-does that work.
+    schema: silver
+    config:
+      loaded_at_field: occurred_at
+      # Warn at 6 hours, error at 24. The streams upstream are continuous, so
+      # six hours of silence is already abnormal, and a full day of it means
+      # every mart below is serving yesterday without saying so.
+      freshness:
+        warn_after: {count: 6, period: hour}
+        error_after: {count: 24, period: hour}
+    tables:
+      - name: transactions
+        description: >
+          One row per settled transaction. This project reads silver and not
+          gold: the gold layer has already fixed the grain at account and
+          day, and four of the five marts here need the transaction itself.
+        columns:
+          - name: transaction_id
+            tests:
+              - unique
+              - not_null
+          - name: account_id
+            tests:
+              - not_null
+          - name: amount
+            description: >
+              FLOAT64 upstream. Cast to NUMERIC in staging, because summing a
+              million binary floats gives a total that depends on the order
+              the rows arrived in.
+            tests:
+              - not_null
+          - name: currency
+            tests:
+              - not_null
+          - name: occurred_at
+            tests:
+              - not_null
+          - name: event_date
+            tests:
+              - not_null
+
+  - name: crm
+    description: >
+      Current state account snapshot. No history and no change timestamps,
+      which is the reason dim_accounts is a full rebuild rather than a
+      snapshot.
+    schema: crm
+    tables:
+      - name: accounts
+        columns:
+          - name: account_id
+            tests:
+              - unique
+              - not_null
+          - name: customer_id
+            tests:
+              - not_null
