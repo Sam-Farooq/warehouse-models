@@ -7,3 +7,56 @@ models:
       category attributes, with every dimension miss flagged instead of
       dropped. Inlined into fct_transactions; it has no relation of its own,
       so its columns are tested there.
+  - name: int_transactions_sequenced
+    description: >
+      Per account time ordering. Reads one calendar day more than it writes,
+      because a window function cannot see a row the WHERE clause removed.
+    tests:
+      - monotonic_within_group:
+          arguments:
+            column_name: txn_seq
+            partition_by: ['account_id']
+            order_by: occurred_at
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_transactions')
+                field: transaction_id
+      - name: txn_seq
+        description: >
+          Position of the transaction in the account's ordering, by
+          occurred_at with transaction_id as the tiebreak.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true
+      - name: seconds_since_prev
+        description: >
+          Gap to the account's previous transaction. Null on the first
+          transaction in the read window, which is not the same as the
+          account's first ever transaction.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+      - name: txns_last_hour
+        description: >
+          Transactions by this account in the preceding 3600 seconds of wall
+          clock, inclusive of this one, so the floor is 1.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true
+      - name: event_date
+        tests:
+          - not_null
+          - not_in_future
