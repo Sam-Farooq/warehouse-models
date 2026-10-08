@@ -56,9 +56,10 @@ sources:
 
   - name: crm
     description: >
-      Current state account snapshot. No history and no change timestamps,
-      which is the reason dim_accounts is a full rebuild rather than a
-      snapshot.
+      Current state account snapshot, and a second upstream: the medallion
+      pipeline does not produce it and nothing in lakehouse-pipeline knows
+      about accounts. No history and no change timestamps, which is the reason
+      dim_accounts is a full rebuild rather than a snapshot.
     schema: crm
     tables:
       - name: accounts

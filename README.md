@@ -1,8 +1,10 @@
 # warehouse-models
 
-A transaction analytics warehouse in dbt on BigQuery, built over the
-medallion output that `lakehouse-pipeline` writes. SQL is the product here.
-The only Python in the repo is one test module for the macros.
+A transaction analytics warehouse in dbt on BigQuery. Transactions come from
+the medallion output that `lakehouse-pipeline` writes. Accounts come from a
+second and separate upstream: a CRM snapshot that has no producer in that repo
+and is declared here as a source in its own right. SQL is the product, and the
+only Python is the offline test harness in `macro_tests/`.
 
 ```
 silver.transactions  ─┐
