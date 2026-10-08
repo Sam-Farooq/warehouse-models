@@ -320,6 +320,7 @@ and the query counts what is being dropped by segment and tenure.
   have never been executed against BigQuery in this repository. The SQL is
   parsed with the BigQuery dialect rather than run, by
   `macro_tests/test_rendered_sql.py`, and dialect-valid is not the same as
-  correct against real data. The 104 tests in `models/**/*.yml` are the part
-  that only means something once a warehouse has run them, and none of them
-  has ever run.
+  correct against real data. The 104 dbt tests are the part that only means
+  something once a warehouse has run them, and not one of them has ever run:
+  91 are declared in `models/**/*.yml`, 11 on the seeds, and 2 are singular
+  tests in `tests/singular/`.
