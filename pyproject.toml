@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "warehouse-models"
+version = "0.4.0"
+description = "Transaction analytics warehouse in dbt on BigQuery"
+requires-python = ">=3.11"
+dependencies = [
+    "dbt-core==1.12.5",
+    "dbt-bigquery==1.12.1",
+]
+
+[project.optional-dependencies]
+# Jinja2 is not here on purpose: it arrives with dbt-core, and pinning a
+# second copy of it is how a project ends up rendering macros under one
+# version and running them under another.
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.10",
+]
+
+# This is a dbt project, not a Python package. The install exists so that dbt
+# and the dev tools resolve from one pinned set, and there is nothing to
+# import.
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["macro_tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
