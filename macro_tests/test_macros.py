@@ -13,92 +13,29 @@ incremental_window() and partition_window() that would otherwise read a day
 the models never write. They do not catch BigQuery rejecting the result.
 Nothing here opens a connection, reads a credential, or needs a warehouse.
 
-The loader rewrites `{% test x %}` into `{% macro test_x %}` before handing
-the file to Jinja, which is what dbt itself does with its TestExtension: a
-generic test is a macro with a reserved name. `return()` raises, also as dbt
-implements it, so a macro that returns a list returns a Python list here too.
+The Jinja environment, the `{% test %}` rewrite and the `return()` behaviour
+that make this possible live in dbt_jinja.py next to this file.
 """
 
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-import jinja2
 import pytest
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MACRO_DIR = REPO_ROOT / "macros"
-GENERIC_TEST_DIR = REPO_ROOT / "tests" / "generic"
-MODEL_DIR = REPO_ROOT / "models"
-
-# Mirrors the vars block in dbt_project.yml. Duplicated rather than parsed out
-# of the YAML, so that a change to the project defaults shows up here as a
-# failing test instead of as a silently different expectation.
-PROJECT_VARS = {
-    "reprocess_window_days": 3,
-    "trailing_window_days": 28,
-    "velocity_txn_per_hour": 6,
-    "country_hop_seconds": 1800,
-    "round_amount_floor": 5000,
-}
-
-TEST_TAG = re.compile(r"{%(-?)\s*test\s+")
-ENDTEST_TAG = re.compile(r"{%(-?)\s*endtest\s*(-?)%}")
-
-
-class MacroReturn(Exception):
-    """What dbt's return() raises to carry a value out of a macro."""
-
-    def __init__(self, value: object) -> None:
-        super().__init__("macro returned a value")
-        self.value = value
-
-
-class CompilerError(Exception):
-    """Stands in for dbt_common.exceptions.CompilationError."""
-
-
-def _jinja_return(value: object) -> None:
-    raise MacroReturn(value)
-
-
-def _var(name: str, default: object = None) -> object:
-    if name not in PROJECT_VARS and default is None:
-        raise KeyError(f"var({name!r}) is not defined in PROJECT_VARS")
-    return PROJECT_VARS.get(name, default)
-
-
-class _Exceptions:
-    @staticmethod
-    def raise_compiler_error(message: str) -> None:
-        raise CompilerError(message)
-
-
-def _environment() -> jinja2.Environment:
-    env = jinja2.Environment(
-        extensions=["jinja2.ext.do"],
-        undefined=jinja2.StrictUndefined,
-        autoescape=False,
-        keep_trailing_newline=True,
-    )
-    env.globals["return"] = _jinja_return
-    env.globals["var"] = _var
-    env.globals["exceptions"] = _Exceptions()
-    return env
-
-
-def _load(path: Path) -> jinja2.Template:
-    source = path.read_text(encoding="utf-8")
-    source = TEST_TAG.sub(r"{%\1 macro test_", source)
-    source = ENDTEST_TAG.sub(r"{%\1 endmacro \2%}", source)
-    return _environment().from_string(source)
+from dbt_jinja import (
+    GENERIC_TEST_DIR,
+    MACRO_DIR,
+    MODEL_DIR,
+    CompilerError,
+    MacroReturn,
+    load,
+)
 
 
 def call(filename: str, macro_name: str, *args: object, **kwargs: object) -> object:
     """Render one macro. Returns squashed SQL text, or the returned object."""
     directory = GENERIC_TEST_DIR if macro_name.startswith("test_") else MACRO_DIR
-    template = _load(directory / filename)
+    template = load(directory / filename)
     macro = getattr(template.module, macro_name)
     try:
         rendered = macro(*args, **kwargs)
@@ -380,7 +317,7 @@ def test_monotonic_within_group_allows_a_repeat_when_not_strict() -> None:
 
 def test_every_macro_file_defines_the_macro_named_after_it() -> None:
     for path in sorted(MACRO_DIR.glob("*.sql")):
-        template = _load(path)
+        template = load(path)
         assert hasattr(template.module, path.stem), (
             f"{path.name} does not define a macro called {path.stem}"
         )
@@ -388,7 +325,7 @@ def test_every_macro_file_defines_the_macro_named_after_it() -> None:
 
 def test_every_generic_test_file_defines_the_test_named_after_it() -> None:
     for path in sorted(GENERIC_TEST_DIR.glob("*.sql")):
-        template = _load(path)
+        template = load(path)
         assert hasattr(template.module, f"test_{path.stem}"), (
             f"{path.name} does not define a test called {path.stem}"
         )

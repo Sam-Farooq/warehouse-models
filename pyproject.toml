@@ -19,6 +19,10 @@ dependencies = [
 dev = [
     "pytest==9.1.1",
     "ruff==0.16.10",
+    # Arrives anyway as a transitive dependency of dbt-core, and is pinned
+    # here because the rendered-SQL tests import it directly. A test suite
+    # that depends on somebody else's dependency breaks on their upgrade.
+    "sqlglot==30.21.0",
 ]
 
 # This is a dbt project, not a Python package. The install exists so that dbt

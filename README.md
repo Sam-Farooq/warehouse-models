@@ -24,7 +24,7 @@ seeds/mcc_categories ─┘           │
                                              └──► dim_accounts
 ```
 
-12 models, 104 dbt tests, 38 macro unit tests. Nothing in CI opens a
+12 models, 104 dbt tests, 66 Python tests. Nothing in CI opens a
 connection to BigQuery.
 
 ## The marts
@@ -218,30 +218,46 @@ forms and warns, which means a project can sit on them for a year and then
 break all at once on an upgrade. The second parse step greps its own output
 and exits non-zero if dbt reported anything deprecated.
 
-### What the macro unit tests do and do not cover
+### What the offline Python tests do and do not cover
 
 `dbt parse` proves every macro exists, parses, and is called with arguments
 that resolve. It says nothing about the SQL that comes out. `dbt compile`
 would, and needs credentials.
 
-`macro_tests/test_macros.py` fills that gap for the four macros and four
-generic tests: it renders each one in a bare Jinja environment and asserts on
-the text. The loader rewrites `{% test x %}` into `{% macro test_x %}` before
-handing the file to Jinja, which is what dbt itself does, and `return()`
-raises so that a macro returning a list returns a Python list here too.
+Two modules cover as much of that gap as can be covered without a warehouse:
+38 tests over the macros, 28 over the rendered SQL.
+
+`macro_tests/test_macros.py` renders each of the four macros and four generic
+tests in a bare Jinja environment and asserts on the text. The loader
+rewrites `{% test x %}` into `{% macro test_x %}` before handing the file to
+Jinja, which is what dbt itself does, and `return()` raises so that a macro
+returning a list returns a Python list here too.
 
 That catches a flipped comparison, a dropped cast, a changed interval, an
 argument that stopped being used, and the off-by-one between the two window
-macros. It does not catch BigQuery rejecting the result. Nothing in the suite
-opens a connection, reads a credential or needs a warehouse.
+macros.
 
-Four of the 38 are convention checks rather than macro tests, and they exist
-because the conventions are load bearing: every macro file defines the macro
-named after it, every generic test has a `WHERE` clause, and every
+Four of those 38 are convention checks rather than macro tests, and they
+exist because the conventions are load bearing: every macro file defines the
+macro named after it, every generic test has a `WHERE` clause, and every
 incremental model filters on the shared window and declares the partitions it
 replaces. That last one guards the most expensive mistake available here, an
 incremental model that reads the whole fact table every run and produces
 perfectly correct numbers while doing it.
+
+`macro_tests/test_rendered_sql.py` works a level up. It renders all 12 models
+and all 3 analyses, every incremental one in both of its branches, and parses
+each result with sqlglot's BigQuery dialect. The macros are the real ones;
+`ref` and `source` are stubbed into table identifiers and `config` renders to
+nothing. It also asserts that each incremental branch carries the shared
+window predicate, that a full refresh carries none, and that the two models
+which read wider than they write still render both spans.
+
+sqlglot's BigQuery parser is not BigQuery. It does not know the column list,
+it type-checks nothing, and a statement it accepts can still be rejected by
+the warehouse or answer the wrong question. It is a syntax gate, and the only
+one a runner with no credentials can hold. Nothing in either module opens a
+connection, reads a credential or needs a warehouse.
 
 ## Running it
 
@@ -301,8 +317,9 @@ and the query counts what is being dropped by segment and tenure.
 - **No exposures and no semantic layer.** Nothing downstream is declared, so
   `dbt build` cannot tell you what a model change breaks.
 - **No `dbt run` in CI.** Everything above is static validation. The models
-  have never been executed against BigQuery in this repository, and the SQL
-  was checked by parsing it with the BigQuery dialect rather than by running
-  it. Dialect-valid is not the same as correct against real data, and the
-  tests in `models/**/*.yml` are the part that only means something once a
-  warehouse has run them.
+  have never been executed against BigQuery in this repository. The SQL is
+  parsed with the BigQuery dialect rather than run, by
+  `macro_tests/test_rendered_sql.py`, and dialect-valid is not the same as
+  correct against real data. The 104 tests in `models/**/*.yml` are the part
+  that only means something once a warehouse has run them, and none of them
+  has ever run.
